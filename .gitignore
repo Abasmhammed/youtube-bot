@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+stream.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Videos (optional - uncomment if you don't want to track videos)
+# videos/*.mp4
+# videos/*.mkv
+# videos/*.mov
