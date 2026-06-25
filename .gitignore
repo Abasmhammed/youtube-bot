@@ -11,16 +11,23 @@ ENV/
 dist/
 build/
 
+# Environment
+.env
+.env.local
+.env.*.local
+
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.iml
 
 # Logs
 *.log
 stream.log
+*.out
 
 # OS
 .DS_Store
