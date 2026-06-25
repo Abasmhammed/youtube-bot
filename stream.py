@@ -1,139 +1,93 @@
-#!/usr/bin/env python3
-"""
-YouTube Live Bot - Advanced Streaming System
-يقوم ببث الفيديوهات التحفيزية بشكل مستمر 24/7 على قناة يوتيوب
-"""
-
 import os
 import subprocess
 import random
 import time
 import logging
-from pathlib import Path
-from datetime import datetime
 
-# إعداد السجلات (Logging)
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s: %(message)s',
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stream.log'),
+        logging.FileStream("stream.log"),
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger(__name__)
 
-# إعدادات البث
+# YouTube RTMP URL
 STREAM_URL = "rtmp://a.rtmp.youtube.com/live2/"
 STREAM_KEY = os.getenv("YOUTUBE_STREAM_KEY")
 VIDEO_FOLDER = "videos"
-RECONNECT_DELAY = 5  # ثوانٍ
-MAX_RETRIES = 3
 
-class YouTubeStreamer:
-    """فئة للتعامل مع بث يوتيوب المباشر"""
+def get_videos():
+    """Get list of videos from the folder"""
+    supported_extensions = ('.mp4', '.mkv', '.mov', '.avi')
+    if not os.path.exists(VIDEO_FOLDER):
+        os.makedirs(VIDEO_FOLDER)
+    videos = [os.path.join(VIDEO_FOLDER, f) for f in os.listdir(VIDEO_FOLDER) 
+              if f.lower().endswith(supported_extensions)]
+    return videos
+
+def stream_video(video_path):
+    """Stream a single video to YouTube using FFmpeg with continuous looping settings"""
+    if not STREAM_KEY:
+        logging.error("YOUTUBE_STREAM_KEY not found in environment variables.")
+        return False
+
+    full_url = f"{STREAM_URL}{STREAM_KEY}"
     
-    def __init__(self):
-        self.stream_url = f"{STREAM_URL}{STREAM_KEY}"
-        self.video_folder = Path(VIDEO_FOLDER)
-        self.current_video = None
-        self.retry_count = 0
-        
-    def get_videos(self):
-        """الحصول على قائمة الفيديوهات المتاحة"""
-        if not self.video_folder.exists():
-            logger.warning(f"مجلد الفيديوهات غير موجود: {self.video_folder}")
-            return []
-        
-        videos = list(self.video_folder.glob("*.mp4")) + \
-                 list(self.video_folder.glob("*.mkv")) + \
-                 list(self.video_folder.glob("*.mov"))
-        
-        logger.info(f"تم العثور على {len(videos)} فيديو")
-        return videos
-    
-    def stream_video(self, video_path):
-        """بث فيديو واحد إلى يوتيوب"""
-        if not os.path.exists(video_path):
-            logger.error(f"الفيديو غير موجود: {video_path}")
-            return False
-        
-        self.current_video = video_path
-        logger.info(f"جاري بث الفيديو: {os.path.basename(video_path)}")
-        
-        # أمر FFmpeg للبث
-        command = [
-            'ffmpeg',
-            '-re',
-            '-i', str(video_path),
-            '-c:v', 'libx264',
-            '-preset', 'veryfast',
-            '-maxrate', '3000k',
-            '-bufsize', '6000k',
-            '-pix_fmt', 'yuv420p',
-            '-g', '50',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-f', 'flv',
-            self.stream_url
-        ]
-        
-        try:
-            result = subprocess.run(command, check=True, capture_output=True, text=True)
-            logger.info(f"انتهى بث الفيديو: {os.path.basename(video_path)}")
-            self.retry_count = 0
-            return True
-        except subprocess.CalledProcessError as e:
-            logger.error(f"خطأ في البث: {e.stderr}")
-            return False
-        except Exception as e:
-            logger.error(f"خطأ غير متوقع: {str(e)}")
-            return False
-    
-    def run(self):
-        """تشغيل البوت بشكل مستمر"""
-        if not STREAM_KEY:
-            logger.error("لم يتم العثور على مفتاح البث (YOUTUBE_STREAM_KEY)")
-            return
-        
-        logger.info("🎬 بدء بوت البث المباشر على يوتيوب")
-        logger.info(f"📁 مجلد الفيديوهات: {self.video_folder}")
-        
-        while True:
-            try:
-                videos = self.get_videos()
-                
-                if not videos:
-                    logger.warning("لا توجد فيديوهات متاحة. جاري الانتظار...")
-                    time.sleep(10)
-                    continue
-                
-                # خلط الفيديوهات بشكل عشوائي
-                random.shuffle(videos)
-                
-                logger.info(f"🔄 بدء دورة بث جديدة ({len(videos)} فيديو)")
-                
-                for video in videos:
-                    if self.stream_video(str(video)):
-                        logger.info(f"✅ تم بث الفيديو بنجاح")
-                    else:
-                        logger.warning(f"⚠️ فشل البث، جاري إعادة المحاولة...")
-                        time.sleep(RECONNECT_DELAY)
-                
-                logger.info("🔁 انتهت الدورة، جاري بدء دورة جديدة...")
-                
-            except KeyboardInterrupt:
-                logger.info("تم إيقاف البوت من قبل المستخدم")
-                break
-            except Exception as e:
-                logger.error(f"خطأ في الحلقة الرئيسية: {str(e)}")
-                time.sleep(RECONNECT_DELAY)
+    # FFmpeg command optimized for 24/7 live streaming
+    command = [
+        'ffmpeg',
+        '-re', 
+        '-i', video_path,
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-maxrate', '3000k',
+        '-bufsize', '6000k',
+        '-pix_fmt', 'yuv420p',
+        '-g', '50', 
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-ar', '44100',
+        '-f', 'flv',
+        full_url
+    ]
+
+    logging.info(f"Streaming: {video_path}")
+    try:
+        # Run FFmpeg and wait for it to complete
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        for line in process.stdout:
+            # We can log ffmpeg output here if needed
+            pass
+        process.wait()
+        return process.returncode == 0
+    except Exception as e:
+        logging.error(f"Unexpected error during streaming: {e}")
+        return False
 
 def main():
-    """الدالة الرئيسية"""
-    streamer = YouTubeStreamer()
-    streamer.run()
+    logging.info("Motivational 24/7 Live Stream Bot Started...")
+    while True:
+        videos = get_videos()
+        if not videos:
+            logging.warning(f"No videos found in '{VIDEO_FOLDER}' folder. Waiting 30 seconds...")
+            time.sleep(30)
+            continue
+        
+        # Shuffle for variety in every loop
+        random.shuffle(videos)
+        
+        for video in videos:
+            success = stream_video(video)
+            if not success:
+                logging.error("Stream interrupted, retrying in 10 seconds...")
+                time.sleep(10)
+                # We break the inner loop to re-scan videos and shuffle again
+                break
+            # Small delay between videos for stability
+            time.sleep(2)
 
 if __name__ == "__main__":
     main()
