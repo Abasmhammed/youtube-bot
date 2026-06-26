@@ -9,7 +9,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileStream("stream.log"),
+        logging.FileHandler("stream.log"),  # ✅ تم التصحيح
         logging.StreamHandler()
     ]
 )
@@ -20,7 +20,6 @@ STREAM_KEY = os.getenv("YOUTUBE_STREAM_KEY")
 VIDEO_FOLDER = "videos"
 
 def get_videos():
-    """Get list of videos from the folder"""
     supported_extensions = ('.mp4', '.mkv', '.mov', '.avi')
     if not os.path.exists(VIDEO_FOLDER):
         os.makedirs(VIDEO_FOLDER)
@@ -29,14 +28,12 @@ def get_videos():
     return videos
 
 def stream_video(video_path):
-    """Stream a single video to YouTube using FFmpeg with continuous looping settings"""
     if not STREAM_KEY:
         logging.error("YOUTUBE_STREAM_KEY not found in environment variables.")
         return False
 
     full_url = f"{STREAM_URL}{STREAM_KEY}"
     
-    # FFmpeg command optimized for 24/7 live streaming
     command = [
         'ffmpeg',
         '-re', 
@@ -56,10 +53,13 @@ def stream_video(video_path):
 
     logging.info(f"Streaming: {video_path}")
     try:
-        # Run FFmpeg and wait for it to complete
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        process = subprocess.Popen(
+            command, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
+            universal_newlines=True
+        )
         for line in process.stdout:
-            # We can log ffmpeg output here if needed
             pass
         process.wait()
         return process.returncode == 0
@@ -76,7 +76,6 @@ def main():
             time.sleep(30)
             continue
         
-        # Shuffle for variety in every loop
         random.shuffle(videos)
         
         for video in videos:
@@ -84,9 +83,7 @@ def main():
             if not success:
                 logging.error("Stream interrupted, retrying in 10 seconds...")
                 time.sleep(10)
-                # We break the inner loop to re-scan videos and shuffle again
                 break
-            # Small delay between videos for stability
             time.sleep(2)
 
 if __name__ == "__main__":
