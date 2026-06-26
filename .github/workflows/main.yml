@@ -1,31 +1,35 @@
 name: YouTube Live Stream 24/7
 
 on:
-  schedule:
-    - cron: '0 */4 * * *'
-  workflow_dispatch:
+ schedule:
+   - cron: '0 */4 * * *'
+ workflow_dispatch:
 
 jobs:
-  stream:
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Start YouTube Live Stream
-        env:
-          YOUTUBE_STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
-        run: |
-          python3 stream.py
+ stream:
+   runs-on: ubuntu-latest
+   timeout-minutes: 240
+   
+   steps:
+     - name: Checkout repository
+       uses: actions/checkout@v4
+     
+     - name: Install FFmpeg
+       run: |
+         sudo apt-get update
+         sudo apt-get install -y ffmpeg fonts-dejavu-core
+     
+     - name: Set up Python
+       uses: actions/setup-python@v4
+       with:
+         python-version: '3.11'
+     
+     - name: Install Python packages
+       run: |
+         pip install edge-tts pillow
+     
+     - name: Start YouTube Live Stream
+       env:
+         YOUTUBE_STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+       run: |
+         python3 stream.py
